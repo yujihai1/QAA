@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>词条查询</title>
+<style>
+*{
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+body{
+    background: #000000;
+    font-family: "SimSun", STSong, serif;
+    color: #eeeeee;
+    min-height: 100vh;
+    padding: 60px 24px;
+}
+.container{
+    max-width: 620px;
+    margin: 0 auto;
+}
+.title{
+    font-size: 22px;
+    text-align: center;
+    letter-spacing: 4px;
+    margin-bottom: 36px;
+    color: #cccccc;
+    font-weight: normal;
+}
+.input-row{
+    display: flex;
+    gap: 10px;
+    margin-bottom: 40px;
+}
+#kw{
+    flex: 1;
+    background: #111111;
+    border: 1px solid #333333;
+    color: #eee;
+    padding: 12px 16px;
+    font-size: 16px;
+    font-family: inherit;
+    border-radius: 4px;
+    outline: none;
+}
+#kw:focus{
+    border-color: #555555;
+}
+#btn{
+    background: #222222;
+    color: #ddd;
+    border: 1px solid #444444;
+    padding: 0 20px;
+    cursor: pointer;
+    font-family: inherit;
+    border-radius: 4px;
+}
+#btn:hover{
+    background: #2c2c2c;
+}
+
+.lyric-wrap{
+    height: 220px;
+    overflow: hidden;
+    position: relative;
+}
+.lyric-inner{
+    position: absolute;
+    width: 100%;
+    bottom: 0;
+    transition: transform 0.8s ease-out;
+}
+.line{
+    font-size: 20px;
+    line-height: 2.2;
+    text-align: center;
+    opacity: 0;
+    transition: opacity 0.7s ease;
+}
+.line.active{
+    opacity: 1;
+}
+</style>
+</head>
+<body>
+<div class="container">
+    <div class="title">词条查询</div>
+    <div class="input-row">
+        <input id="kw" placeholder="输入关键词">
+        <button id="btn">查询</button>
+    </div>
+    <div class="lyric-wrap">
+        <div class="lyric-inner" id="lyricBox"></div>
+    </div>
+</div>
+
+<script>
+// ============ 【1、你的关键词词库，在这里扩充】 =============
+const dict = {
+    "荷花": "荷花一般在夏至到大暑盛开\n盛花期为小暑、大暑\n喜温热多雨的时节",
+    "禁制": "禁制分锁身禁制与结界禁制\n一旦触发逃逸，便会启动惩戒\n多用于拘押、执法禁锢",
+    "蚜虫": "少量蚜虫可用清水冲洗\n自制肥皂水喷洒也有效\n严重可使用吡虫啉"
+};
+// ============ 【2、匹配不到关键词时，随机抽选的兜底句子池】 =============
+const randomPool = [
+    "尚未收录此问，静待新笺",
+    "此语不在典籍之中",
+    "暂无对应记载，不妨换一词询之",
+    "识不得此言，再试别的吧"
+];
+// ============ 【3、空闲多久自动复位（毫秒，30000=30秒没人操作就回到初始句）】 =============
+const idleTime = 30000;
+const initText = "在此等候问询"; // 空闲自动切回的初始那句话
+// ======================================================================
+
+const kwEl = document.getElementById('kw');
+const lyricBox = document.getElementById('lyricBox');
+const btn = document.getElementById('btn');
+let idleTimer = null;
+
+// 逐行淡入上滚歌词动画
+async function showLyric(text) {
+    clearTimeout(idleTimer);
+    lyricBox.innerHTML = "";
+    const lines = text.split("\n");
+    let htmlLines = [];
+    for(let i=0; i<lines.length; i++){
+        htmlLines.push(`<div class="line">${lines[i]}</div>`);
+    }
+    lyricBox.innerHTML = htmlLines.join("");
+    const domLines = lyricBox.querySelectorAll(".line");
+    lyricBox.style.transform = `translateY(0px)`;
+
+    for(let i=0; i<domLines.length; i++){
+        await sleep(450);
+        domLines[i].classList.add("active");
+        const offset = (i+1) * -44;
+        lyricBox.style.transform = `translateY(${offset}px)`;
+    }
+    // 展示完成后，开始倒计时空闲重置
+    startIdleReset();
+}
+function sleep(ms){
+    return new Promise(resolve=>setTimeout(resolve, ms));
+}
+// 空闲倒计时，超时回到初始句子
+function startIdleReset(){
+    clearTimeout(idleTimer);
+    idleTimer = setTimeout(()=>{
+        showLyric(initText);
+    }, idleTime);
+}
+// 随机取兜底句子
+function getRandomTip(){
+    const idx = Math.floor(Math.random() * randomPool.length);
+    return randomPool[idx];
+}
+
+function search(){
+    const text = kwEl.value.trim();
+    let ans = getRandomTip(); // 默认走随机兜底
+    for(let k in dict){
+        if(text.includes(k)){
+            ans = dict[k];
+            break;
+        }
+    }
+    showLyric(ans);
+}
+
+btn.onclick = search;
+kwEl.onkeydown = (e)=>{
+    if(e.key === "Enter") search();
+}
+// 页面刚打开，先显示初始句
+showLyric(initText);
+</script>
+</body>
+</html>
